@@ -1,0 +1,41 @@
+version: "3.7"
+
+services:
+  
+  web:
+    build:
+      context: ./agentworld
+      dockerfile: ./docker/Dockerfile.dev.local
+    command: uvicorn core.asgi:application --host 0.0.0.0 --port 8000 --reload --reload-include '*.py' --reload-include '*.html'
+    restart: always
+    container_name: agentworld_development
+    volumes:
+      - ./agentworld:/agentworld
+    ports:
+      - 8000:8000
+    env_file:
+      - ./agentworld/docker/.env.dev.local
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings.development
+    depends_on:
+      - redis
+
+  redis: 
+    image: redis:alpine
+    container_name: agentworld_redis_development
+
+  celery:
+    container_name: agentworld_celery
+    build:
+      context: ./agentworld
+      dockerfile: ./docker/Dockerfile.celery.local
+    command: celery --app=core worker -l INFO
+    volumes:
+      - ./agentworld:/agentworld
+    env_file:
+      - ./agentworld/docker/.env.celery.local
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings.development
+    depends_on:
+      - redis
+      - web

@@ -1,0 +1,21 @@
+FROM python:3.12-slim-bookworm
+
+# set work directory
+WORKDIR /aiditor
+
+# set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Install Packages
+RUN apt-get -y update
+
+# Dependencies
+RUN pip install --upgrade pip
+COPY ./docker/requirements.celery.txt .
+RUN pip install -r requirements.celery.txt
+RUN playwright install
+RUN playwright install-deps
+
+# Project copy
+COPY ./core /aiditor/core

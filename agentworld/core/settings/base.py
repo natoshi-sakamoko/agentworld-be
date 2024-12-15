@@ -26,8 +26,32 @@ SECRET_KEY = 'django-insecure-m7(7do-%piiu!-hye%w^t0t1_*a7!c7f3tr&cgr^a2a((6lwg5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["127.0.0.1"]#os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost").split(" ")
+ALLOWED_HOSTS = ["127.0.0.1", "localhost"]#os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost").split(" ")
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
 
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
 
 # Application definition
 
@@ -44,6 +68,7 @@ THIRD_PARTY_APPS = [
     'channels',
     'rest_framework',
     'knox',
+    'corsheaders',
 ]
 
 LOCAL_APPS = [
@@ -55,6 +80,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 APPS_DIR = BASE_DIR / "apps"
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

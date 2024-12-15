@@ -13,6 +13,7 @@ router.register(r'agents', views.AgentViewSet)
 router.register(r'agent_skills', views.AgentSkillViewSet)
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('api/skills/<uuid:skill_id>/activate/', views.CreateActiveSkillFromTemplateView.as_view(), name='create-active-skill'),
+    path('api/', include(router.urls)),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework'))
 ]

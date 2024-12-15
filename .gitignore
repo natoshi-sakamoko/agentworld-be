@@ -164,3 +164,4 @@ cython_debug/
 # Custom
 agentworld/docker/.env*
 agentworld/staticfiles
+agentworld/media

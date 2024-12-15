@@ -11,16 +11,7 @@ class Token(models.Model):
     value = models.CharField(max_length=500, blank=True, null=False, default="")
     creator = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
 
-class TokenConfig(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    header = models.CharField(max_length=40, blank=True, null=False, default="")
-    prefix = models.CharField(max_length=40, blank=True, null=False, default="")
-    headers = models.JSONField(null=False, blank=True, default=dict)
-
-def createTokenConfig():
-    return TokenConfig(header="Authorization", prefix="Bearer")
-
-class Skill(models.Model):
+class SkillTemplate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=40, blank=True, null=False, default="")
     description = models.CharField(max_length=500, blank=True, null=False, default="")
@@ -32,7 +23,6 @@ class Skill(models.Model):
                              null=True)
     openapi_schema = models.TextField()
     guidelines = models.JSONField(null=False, blank=True, default=list)
-    token_config = models.ForeignKey(TokenConfig, null=True, blank=True, on_delete=models.PROTECT, default=createTokenConfig)
     category = models.CharField(
         max_length=50,
         choices=[
@@ -52,15 +42,18 @@ class Skill(models.Model):
         null=True,
         blank=True
     )
+    auth_header = models.CharField(max_length=40, blank=True, null=False, default="")
+    auth_prefix = models.CharField(max_length=40, blank=True, null=False, default="")
+    auth_headers = models.JSONField(null=False, blank=True, default=dict)
 
-class ActiveSkill(models.Model):
+
+class Skill(models.Model):
     """
-    ActiveSkill can be created from scratch, as well as from templates.
+    Skill can be created from scratch, as well as from templates.
     Name, Description, OpenAPI_schema, Guidelines can be customized.
     They will be populated from template (skill object) during creation.
     Tokens can be deleted later. So null = True. Creator can be deleted too.
-    TokenConfig is null because maybe there is not auth required.
-    Skill is reference to the template (will be null when creating from scratch.)
+    skill_template is reference to the template (will be null when creating from scratch.)
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=40, blank=True, null=False, default="")
@@ -69,8 +62,10 @@ class ActiveSkill(models.Model):
     guidelines = models.JSONField(null=False, blank=True, default=list)
     token = models.ForeignKey(Token, null=True, blank=True, on_delete=models.SET_NULL)
     creator = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-    token_config = models.ForeignKey(TokenConfig, null=True, blank=True, on_delete=models.PROTECT)
-    skill = models.ForeignKey(Skill, null=True, blank=False, on_delete=models.PROTECT)
+    auth_header = models.CharField(max_length=40, blank=True, null=False, default="")
+    auth_prefix = models.CharField(max_length=40, blank=True, null=False, default="")
+    auth_headers = models.JSONField(null=False, blank=True, default=dict)
+    skill_template = models.ForeignKey(SkillTemplate, null=True, blank=False, on_delete=models.PROTECT)
 
 class Agent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -78,8 +73,4 @@ class Agent(models.Model):
     description = models.CharField(max_length=500, blank=True, null=False, default="")
     instructions = models.JSONField(null=False, blank=True, default=list)
     creator = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
-
-class AgentSkill(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    agent = models.ForeignKey(Agent, null=False, on_delete=models.CASCADE)
-    skill = models.ForeignKey(ActiveSkill, null=False, on_delete=models.PROTECT)
+    skills = models.ManyToManyField(Skill)

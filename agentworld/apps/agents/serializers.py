@@ -1,10 +1,9 @@
-from apps.agents.models import Token, TokenConfig, Skill, ActiveSkill, Agent, AgentSkill
+from apps.agents.models import Token, SkillTemplate, Skill, Agent
 from django.contrib.auth.models import User
 from rest_framework import serializers
 
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
-    id = serializers.UUIDField(read_only=True)
 
     class Meta:
         model = User
@@ -17,13 +16,6 @@ class TokenSerializer(serializers.HyperlinkedModelSerializer):
         model = Token
         fields = '__all__'
 
-class TokenConfigSerializer(serializers.HyperlinkedModelSerializer):
-    id = serializers.UUIDField(read_only=True)
-
-    class Meta:
-        model = TokenConfig
-        fields = '__all__'
-
 def get_endpoints(raw_api_spec):
     endpoints = [
         {"endpoint":route, "type":operation}
@@ -33,10 +25,9 @@ def get_endpoints(raw_api_spec):
     ]
     return endpoints
 
-class SkillSerializer(serializers.HyperlinkedModelSerializer):
+class SkillTemplateSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.UUIDField(read_only=True)
     endpoints = serializers.SerializerMethodField()
-    token_config = TokenConfigSerializer(read_only=True)
 
     def get_endpoints(self, obj):
         import yaml
@@ -44,27 +35,19 @@ class SkillSerializer(serializers.HyperlinkedModelSerializer):
         return get_endpoints(raw_api_spec)
 
     class Meta:
+        model = SkillTemplate
+        fields = '__all__'
+
+class SkillSerializer(serializers.HyperlinkedModelSerializer):
+    id = serializers.UUIDField(read_only=True)
+
+    class Meta:
         model = Skill
-        fields = '__all__'
-
-class ActiveSkillSerializer(serializers.HyperlinkedModelSerializer):
-    id = serializers.UUIDField(read_only=True)
-
-    class Meta:
-        model = ActiveSkill
-        fields = '__all__'
-
-class AgentSkillSerializer(serializers.HyperlinkedModelSerializer):
-    id = serializers.UUIDField(read_only=True)
-    skill = ActiveSkillSerializer(read_only=True)
-    
-    class Meta:
-        model = AgentSkill
         fields = '__all__'
 
 class AgentSerializer(serializers.HyperlinkedModelSerializer):
     id = serializers.UUIDField(read_only=True)
-    skills = AgentSkillSerializer(source='agentskill_set', many=True, read_only=True)
+    skills = SkillSerializer(read_only=True, many=True)
     
     class Meta:
         model = Agent

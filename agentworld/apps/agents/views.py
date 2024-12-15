@@ -4,9 +4,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
-from apps.agents.models import Skill, ActiveSkill
-from apps.agents.serializers import ActiveSkillSerializer
-from django.urls import path
+from apps.agents.models import Skill
 
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -25,12 +23,12 @@ class TokenViewSet(viewsets.ModelViewSet):
     serializer_class = TokenSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class TokenConfigViewSet(viewsets.ModelViewSet):
+class SkillTemplateViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows token_configs to be viewed or edited.
+    API endpoint that allows tokens to be viewed or edited.
     """
-    queryset = TokenConfig.objects.all().order_by('id')
-    serializer_class = TokenConfigSerializer
+    queryset = SkillTemplate.objects.all()
+    serializer_class = SkillTemplateSerializer
     permission_classes = [permissions.IsAuthenticated]
 
 class SkillViewSet(viewsets.ModelViewSet):
@@ -41,14 +39,6 @@ class SkillViewSet(viewsets.ModelViewSet):
     serializer_class = SkillSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class ActiveSkillViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows tokens to be viewed or edited.
-    """
-    queryset = ActiveSkill.objects.all()
-    serializer_class = ActiveSkillSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
 class AgentViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows tokens to be viewed or edited.
@@ -57,41 +47,66 @@ class AgentViewSet(viewsets.ModelViewSet):
     serializer_class = AgentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-class AgentSkillViewSet(viewsets.ModelViewSet):
+class CreateSkillFromTemplateView(APIView):
     """
-    API endpoint that allows tokens to be viewed or edited.
-    """
-    queryset = AgentSkill.objects.all()
-    serializer_class = AgentSkillSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-class CreateActiveSkillFromTemplateView(APIView):
-    """
-    API endpoint that creates an ActiveSkill from a Skill template.
+    API endpoint that creates an Skill from a Skill template.
     """
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, skill_id):
+    def post(self, request, skill_template_id):
         # Get the skill template
-        skill = get_object_or_404(Skill, id=skill_id)
+        skill_template = get_object_or_404(SkillTemplate, id=skill_template_id)
         # Get the token id
         token_id = request.data.get('token_id', None)
         if token_id is None:
             return Response({"error": "token_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         token = get_object_or_404(Token, id=token_id)
         
-        # Create ActiveSkill with data from the skill template
-        active_skill = ActiveSkill.objects.create(
-            name=skill.name,
-            description=skill.description,
-            openapi_schema=skill.openapi_schema,
-            guidelines=skill.guidelines,
-            token_config=skill.token_config,
+        # Create Skill with data from the skill template
+        skill = Skill.objects.create(
+            name=skill_template.name,
+            description=skill_template.description,
+            openapi_schema=skill_template.openapi_schema,
+            guidelines=skill_template.guidelines,
+            auth_header=skill_template.auth_header,
+            auth_prefix=skill_template.auth_prefix,
+            auth_headers=skill_template.auth_headers,
             token=token,
             creator=request.user,
-            skill=skill  # Reference to the template
+            skill_template=skill_template  # Reference to the template
         )
 
-        # Serialize and return the created ActiveSkill
-        serializer = ActiveSkillSerializer(active_skill, context={'request': request})
+        # Serialize and return the created Skill
+        serializer = SkillSerializer(skill, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class CreateAgentView(APIView):
+    """
+    API endpoint that creates an Agent from a POST request.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        # Get the data from request
+        data = request.data.copy()
+
+        # Get the skills IDs from the request
+        skills_ids = data.pop('skills', [])
+        
+        # Create serializer with the data
+        serializer = AgentSerializer(data=data, context={'request': request})
+        
+        if serializer.is_valid():
+            # Save the agent
+            agent = serializer.save(creator=request.user)
+            
+            # Add skills to the agent
+            for skill_id in skills_ids:
+                skill = get_object_or_404(Skill, id=skill_id)
+                agent.skills.add(skill)
+            
+            # Re-serialize with the skills included
+            serializer = AgentSerializer(agent, context={'request': request})
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
